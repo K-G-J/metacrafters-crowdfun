@@ -126,6 +126,8 @@ contract Crowdfund is Initializable {
         minDuration = _minDuration;
     }
 
+    /* ========== EXTERNAL FUNCTIONS ========== */
+
     /**
      * @dev function called by campaign creator to create the crowdfunding campaign and add Campaign to mapping
      * @param _goal - the amount of tokens the campaign aims to receive
@@ -162,10 +164,8 @@ contract Crowdfund is Initializable {
      */
     function cancel(
         uint256 _id
-    ) external campaignExists(_id) notCancelled(_id) onlyCreator(_id) {
-        Campaign memory campaign = campaigns[_id];
-
-        campaign.cancelled = true;
+    ) external campaignExists(_id) onlyCreator(_id) notCancelled(_id) {
+        campaigns[_id].cancelled = true;
 
         emit Cancel(_id);
     }
@@ -173,6 +173,7 @@ contract Crowdfund is Initializable {
     /**
      * @dev function to transfer tokens from pledger into the contract
      * @dev sender must first call approve on the ERC20 token for this contract address and _amount
+     * @dev campaign must not be cancelled, must be within startAt and endAt times
      * @param _id - the uinique uint256 id of the campaign to be pledged
      * @param _amount - the amount of tokens trasferred from pledger into contract
      */
@@ -196,30 +197,23 @@ contract Crowdfund is Initializable {
     }
 
     /**
-     * @dev function for pledger to unpledge their tokens and receive them back BEFORE a campaign has ended
-     * @dev if a campaign has ended and not met goal, pledger then calls refund function
+     * @dev function for pledger to unpledge their tokens and receive them back BEFORE a campaign has ended (ex: unpledge if campaign cancelled before end time)
+     * @dev pledger specifies amount of tokens to unpledge, if a campaign has ended and not met goal, pledger then calls refund function to receive all tokens back
      * @param _id - the uinique uint256 id of the campaign to be unpledged
      * @param _amount - the amount of tokens transferred from contract back to pledger
      */
-
     function unpledge(
         uint256 _id,
         uint256 _amount
     ) external campaignExists(_id) campaignNotEnded(_id) {
-        Campaign storage campaign = campaigns[_id];
-        require(pledgedAmount[_id][msg.sender] <= _amount, "invalid amount");
-
-        campaign.pledged -= _amount;
-        pledgedAmount[_id][msg.sender] -= _amount;
-        token.safeApprove(msg.sender, _amount);
-        token.safeTransfer(msg.sender, _amount);
+        _refund(msg.sender, _id, _amount);
 
         emit Unpledged(_id, msg.sender, _amount);
     }
 
     /**
      * @dev function called by campaign creator to receive funds
-     * @dev called must be creator, creator cannot have cancelled the campaign, campaign must have passed end at time, the campaign goal must have been met or exceeded
+     * @dev caller must be creator, creator cannot have cancelled the campaign, campaign must have passed end at time, the campaign goal must have been met or exceeded
      * @dev this function can only be called once by creator
      * @param _id - the uinique uint256 id of the campaign which funds are claimed
      */
@@ -239,7 +233,7 @@ contract Crowdfund is Initializable {
     }
 
     /**
-     * @dev function to refund tokens from this contract back to the pledger after a campaign fails
+     * @dev function to refund ALL the pledged tokens from pledger in this contract back to the pledger AFTER a campaign has ended and failed
      * @dev when a funding goal is not met, pledgers are be able to get a refund of their pledged funds
      * @param _id - the uinique uint256 id of the campaign to refund from
      */
@@ -250,11 +244,30 @@ contract Crowdfund is Initializable {
 
         require(campaign.pledged < campaign.goal, "pledged >= goal");
 
-        uint256 bal = pledgedAmount[_id][msg.sender];
-        pledgedAmount[_id][msg.sender] = 0;
-        token.safeApprove(msg.sender, bal);
-        token.safeTransfer(msg.sender, bal);
+        uint256 _bal = pledgedAmount[_id][msg.sender];
+        _refund(msg.sender, _id, _bal);
 
-        emit Refund(_id, msg.sender, bal);
+        emit Refund(_id, msg.sender, _bal);
+    }
+
+    /* ========== INTERNAL FUNCTIONS ========== */
+
+    /**
+     * @dev internal function to safeTransfer tokens from this contract back to a pledger
+     * @param _donor - the address of the pledger receiving the refund
+     * @param _id - the uinique uint256 id of the campaign being refunded from
+     * @param _amount - the amount of tokens transferred from contract back to pledger
+     */
+    function _refund(address _donor, uint256 _id, uint256 _amount) private {
+        uint256 bal = pledgedAmount[_id][_donor];
+
+        require(_donor != address(0), "invalid address");
+        require(_amount > 0 && _amount <= bal, "invalid amount");
+
+        bal -= _amount;
+        campaigns[_id].pledged -= _amount;
+
+        token.safeApprove(_donor, _amount);
+        token.safeTransfer(_donor, _amount);
     }
 }
