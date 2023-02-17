@@ -16,7 +16,7 @@ export interface networkConfigInfo {
 export const networkConfig: networkConfigInfo = {
   31337: {
     name: 'localhost',
-    tokenAddress: '', // will be set to mockToken address in deploy script
+    tokenAddress: '', // will be set to MockToken address in 01_deployCrowdfund script
     min_duration: ethers.BigNumber.from('30'), // 30 seconds
     max_duration: ethers.BigNumber.from('120') // two minutes
   },
