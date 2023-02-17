@@ -1,13 +1,21 @@
-# Sample Hardhat Project
+# Metacrafters Solidity Challenge: Crowdfund
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+## Description
+Crowdfunding campaign where users can pledge funds to and claim funds from the Crowdfund contract. The funds take the form of a custom ERC20 token (MockToken contract is used for localhost deployments). Crowdfunding projects have a funding goal set when launched. Campaign creators may cancel the campaign after launch. Pledgers are be able to get a refund of their pledged funds durring campaign runtime or after campaign ends and funding goal is not met. dApps using the contract can observe state changes in transaction logs and events. The Crowdfund contract is upgradeable.
 
-Try running some of the following tasks:
+This project is made to fulfill the [METACRAFTERS](https://www.metacrafters.io) Talent Collective Solidity challenge
+## Installation
+
+1. Clone this repository
+2. Run command: ```yarn``` to install dependencies
+3. Use .env.example to create and fill out .env file
+
+## Commands
 
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+yarn hardhat deploy 
+yarn hardhat test
+REPORT_GAS=true yarn hardhat test
+yarn hardhat node
+yarn hardhat run scripts/pledge.ts
 ```
