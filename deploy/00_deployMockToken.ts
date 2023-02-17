@@ -1,10 +1,13 @@
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { ethers } from 'ethers';
 import { MockToken } from '../typechain-types/contracts/MockToken';
+import { ethers } from 'hardhat';
 
-const developmentChains = ['hardhat', 'localhost'];
-const VERIFICATION_BLOCK_CONFIRMATIONS = 6;
+import {
+  developmentChains,
+  VERIFICATION_BLOCK_CONFIRMATIONS
+} from '../helper-hardhat-config';
 
 const deployMockToken: DeployFunction = async function (
   hre: HardhatRuntimeEnvironment
@@ -29,8 +32,8 @@ const deployMockToken: DeployFunction = async function (
       log: true,
       waitConfirmations: waitBlockConfirmations
     });
-    
-    // mockToken = await ethers.getContract('MockToken');
+
+    mockToken = await ethers.getContract('MockToken');
 
     log('----------------------------------------------------');
   }

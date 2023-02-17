@@ -5,19 +5,17 @@ import { MockToken } from '../typechain-types/contracts/MockToken';
 import { Crowdfund } from '../typechain-types';
 import verify from '../utils/verify';
 
+import {
+  networkConfig,
+  developmentChains,
+  VERIFICATION_BLOCK_CONFIRMATIONS
+} from '../helper-hardhat-config';
+
 interface IInitArgs {
   tokenAddress: string;
   min_duration: BigNumber;
   max_duration: BigNumber;
 }
-
-const developmentChains = ['hardhat', 'localhost'];
-const VERIFICATION_BLOCK_CONFIRMATIONS = 6;
-
-// If not deploying on localhost
-const tokenAddress = 'custom token address';
-const min_duration = ethers.BigNumber.from('30'); // 30 seconds
-const max_duration = ethers.BigNumber.from('120'); // 2 minutes
 
 const deployCrowdfund: DeployFunction = async function (
   hre: HardhatRuntimeEnvironment
@@ -30,6 +28,12 @@ const deployCrowdfund: DeployFunction = async function (
   const chainId = network.config.chainId;
   let mockToken: MockToken, crowdfund: Crowdfund;
 
+  const initArgs: IInitArgs = {
+    tokenAddress: networkConfig[network.config.chainId!]['tokenAddress'],
+    min_duration: networkConfig[network.config.chainId!]['min_duration'],
+    max_duration: networkConfig[network.config.chainId!]['max_duration']
+  };
+
   if (chainId == 31337) {
     mockToken = await ethers.getContract('MockToken');
 
@@ -39,11 +43,7 @@ const deployCrowdfund: DeployFunction = async function (
 
     log('----------------------------------------------------');
 
-    const initArgs: IInitArgs = {
-      tokenAddress: mockToken.address,
-      min_duration: ethers.BigNumber.from('30'), // 30 seconds
-      max_duration: ethers.BigNumber.from('120') // two minutes
-    };
+    initArgs.tokenAddress = mockToken.address;
 
     await deploy('Crowdfund', {
       from: deployer,
@@ -54,6 +54,7 @@ const deployCrowdfund: DeployFunction = async function (
     log('----------------------------------------------------');
 
     log('Initializing Crowdfund');
+
     crowdfund = await ethers.getContract('Crowdfund');
     const initTx = await crowdfund.initialize(
       initArgs.tokenAddress,
@@ -61,6 +62,7 @@ const deployCrowdfund: DeployFunction = async function (
       initArgs.max_duration
     );
     initTx.wait(1);
+
     log('Crowdfund initialized');
   } else {
     const waitBlockConfirmations = developmentChains.includes(network.name)
@@ -69,12 +71,6 @@ const deployCrowdfund: DeployFunction = async function (
 
     log('----------------------------------------------------');
 
-    const initArgs: IInitArgs = {
-      tokenAddress: tokenAddress,
-      min_duration: min_duration,
-      max_duration: max_duration
-    };
-
     await deploy('Crowdfund', {
       from: deployer,
       log: true,
@@ -82,6 +78,7 @@ const deployCrowdfund: DeployFunction = async function (
     });
 
     log('Initializing Crowdfund');
+
     crowdfund = await ethers.getContract('Crowdfund');
     const initTx = await crowdfund.initialize(
       initArgs.tokenAddress,
@@ -89,6 +86,7 @@ const deployCrowdfund: DeployFunction = async function (
       initArgs.max_duration
     );
     initTx.wait(1);
+
     log('Crowdfund initialized');
 
     // Verify the deployment
