@@ -1,10 +1,10 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { ethers } from 'ethers';
+import { MockToken } from '../typechain-types/contracts/MockToken';
 
 const developmentChains = ['hardhat', 'localhost'];
 const VERIFICATION_BLOCK_CONFIRMATIONS = 6;
-
-import verify from '../utils/verify';
 
 const deployMockToken: DeployFunction = async function (
   hre: HardhatRuntimeEnvironment
@@ -15,6 +15,7 @@ const deployMockToken: DeployFunction = async function (
   const { deployer } = await getNamedAccounts();
 
   const chainId = network.config.chainId;
+  let mockToken: MockToken;
 
   if (chainId == 31337) {
     const waitBlockConfirmations = developmentChains.includes(network.name)
@@ -23,20 +24,14 @@ const deployMockToken: DeployFunction = async function (
 
     log('----------------------------------------------------');
 
-    const mockToken = await deploy('MockToken', {
+    await deploy('MockToken', {
       from: deployer,
       log: true,
       waitConfirmations: waitBlockConfirmations
     });
+    
+    // mockToken = await ethers.getContract('MockToken');
 
-    // Verify the deployment
-    if (
-      !developmentChains.includes(network.name) &&
-      process.env.ETHERSCAN_API_KEY
-    ) {
-      log('Verifying...');
-      await verify(mockToken.address, []);
-    }
     log('----------------------------------------------------');
   }
 };
