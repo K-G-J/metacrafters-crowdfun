@@ -18,13 +18,13 @@ export const networkConfig: networkConfigInfo = {
     name: 'localhost',
     tokenAddress: '', // will be set to MockToken address in 01_deployCrowdfund script
     min_duration: ethers.BigNumber.from('30'), // 30 seconds
-    max_duration: ethers.BigNumber.from('120') // two minutes
+    max_duration: ethers.BigNumber.from('60') // 1 minute
   },
   5: {
     name: 'goerli',
     tokenAddress: 'custom token address',
     min_duration: ethers.BigNumber.from('30'), // 30 seconds
-    max_duration: ethers.BigNumber.from('120') // two minutes
+    max_duration: ethers.BigNumber.from('60') // 1 minute
   }
 };
 

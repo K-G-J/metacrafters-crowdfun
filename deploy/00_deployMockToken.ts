@@ -40,4 +40,4 @@ const deployMockToken: DeployFunction = async function (
 };
 
 export default deployMockToken;
-deployMockToken.tags = ['all', 'MockToken'];
+deployMockToken.tags = ['all', 'mocktoken'];

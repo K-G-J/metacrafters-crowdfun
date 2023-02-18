@@ -118,12 +118,13 @@ contract Crowdfund is Initializable {
 
     function initialize(
         IERC20 _token,
-        uint256 _maxDuration,
-        uint256 _minDuration
-    ) public initializer {
+        uint256 _minDuration,
+        uint256 _maxDuration
+    ) public initializer onlyInitializing {
+        require(_minDuration < _maxDuration, "minDuration > maxDuration");
         token = _token;
-        maxDuration = _maxDuration;
         minDuration = _minDuration;
+        maxDuration = _maxDuration;
     }
 
     /* ========== EXTERNAL FUNCTIONS ========== */
