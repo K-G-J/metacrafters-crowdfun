@@ -1,13 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import { BigNumber } from 'ethers';
-import {
-  network,
-  deployments,
-  ethers,
-  getNamedAccounts,
-  getChainId
-} from 'hardhat';
+import { network, deployments, ethers } from 'hardhat';
 import { time } from '@nomicfoundation/hardhat-network-helpers';
 import { developmentChains, networkConfig } from '../helper-hardhat-config';
 import { MockToken, Crowdfund } from '../typechain-types';
