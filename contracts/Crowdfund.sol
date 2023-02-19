@@ -260,12 +260,12 @@ contract Crowdfund is Initializable {
      * @param _amount - the amount of tokens transferred from contract back to pledger
      */
     function _refund(address _donor, uint256 _id, uint256 _amount) private {
-        uint256 bal = pledgedAmount[_id][_donor];
+        require(
+            _amount > 0 && _amount <= pledgedAmount[_id][_donor],
+            "invalid amount"
+        );
 
-        require(_donor != address(0), "invalid address");
-        require(_amount > 0 && _amount <= bal, "invalid amount");
-
-        bal -= _amount;
+        pledgedAmount[_id][_donor] -= _amount;
         campaigns[_id].pledged -= _amount;
 
         token.safeApprove(_donor, _amount);

@@ -44,9 +44,36 @@ async function setUp(): Promise<void> {
   endAt = startAt + Number(minDuration) + 15;
 }
 
-async function launchCampaign(): Promise<void> {
-  await crowdfund.launch(campaignGoal, startAt, endAt);
-  await expectValue((await crowdfund.campaigns(1)).id, 1);
+async function launchCampaigns(numCampaigns: number): Promise<void> {
+  for (let i: number = 1; i <= numCampaigns; i++) {
+    await crowdfund.launch(campaignGoal, startAt, endAt);
+    await expectValue((await crowdfund.campaigns(i)).id, i);
+  }
+}
+
+async function pledge(
+  pledger: SignerWithAddress,
+  campaignId: number
+): Promise<void> {
+  await time.increaseTo(startAt);
+  const donationsBefore: BigNumber = (await crowdfund.campaigns(campaignId))
+    .pledged;
+  const pledgedBefore: BigNumber = await crowdfund.pledgedAmount(
+    campaignId,
+    pledger.address
+  );
+  await mockToken.connect(pledger).approve(crowdfund.address, donationAmount);
+  await crowdfund.connect(pledger).pledge(campaignId, donationAmount);
+  await expectValue(
+    (
+      await crowdfund.campaigns(campaignId)
+    ).pledged,
+    donationsBefore.add(donationAmount)
+  );
+  await expectValue(
+    await crowdfund.pledgedAmount(campaignId, pledger.address),
+    pledgedBefore.add(donationAmount)
+  );
 }
 
 // hh test --network localhost --grep "Crowdfund Unit Tests"
@@ -161,7 +188,7 @@ async function launchCampaign(): Promise<void> {
       });
       describe('cancel', function () {
         beforeEach(async () => {
-          await launchCampaign();
+          await launchCampaigns(1);
         });
         it('should revert if campaign does not exist', async () => {
           await expectRevert(crowdfund.cancel(2), 'campaign does not exist');
@@ -193,7 +220,7 @@ async function launchCampaign(): Promise<void> {
       });
       describe('pledge', function () {
         beforeEach(async () => {
-          await launchCampaign();
+          await launchCampaigns(1);
         });
         it('should revert if campaign does not exist', async () => {
           await expectRevert(
@@ -201,6 +228,10 @@ async function launchCampaign(): Promise<void> {
             'campaign does not exist'
           );
           await expectValue((await crowdfund.campaigns(1)).pledged, 0);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            0
+          );
         });
         it('should revert if campaign cancelled', async () => {
           await crowdfund.cancel(1);
@@ -210,6 +241,10 @@ async function launchCampaign(): Promise<void> {
             'campaign cancelled'
           );
           await expectValue((await crowdfund.campaigns(1)).pledged, 0);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            0
+          );
         });
         it('should revert if campaign not started', async () => {
           await expectRevert(
@@ -217,6 +252,10 @@ async function launchCampaign(): Promise<void> {
             'campaign not started'
           );
           await expectValue((await crowdfund.campaigns(1)).pledged, 0);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            0
+          );
         });
         it('should revert if campaign ended', async () => {
           await time.increaseTo(endAt + 30);
@@ -225,6 +264,10 @@ async function launchCampaign(): Promise<void> {
             'campaign ended'
           );
           await expectValue((await crowdfund.campaigns(1)).pledged, 0);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            0
+          );
         });
         it('should pledge donation amount to campaign', async () => {
           await time.increaseTo(startAt);
@@ -236,6 +279,15 @@ async function launchCampaign(): Promise<void> {
             (
               await crowdfund.campaigns(1)
             ).pledged,
+            donationAmount
+          );
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            donationAmount
+          );
+          await expectValue(await mockToken.balanceOf(pledger1.address), 0);
+          await expectValue(
+            await mockToken.balanceOf(crowdfund.address),
             donationAmount
           );
         });
@@ -252,7 +304,119 @@ async function launchCampaign(): Promise<void> {
           );
         });
       });
-      describe('unpledge', function () {});
-      describe('claim', function () {});
-      describe('refund', function () {});
+      describe('unpledge', function () {
+        beforeEach(async () => {
+          await launchCampaigns(1);
+          await pledge(pledger1, 1);
+        });
+        it('should revert if campaign does not exist', async () => {
+          await expectRevert(
+            crowdfund.connect(pledger1).unpledge(2, donationAmount),
+            'campaign does not exist'
+          );
+          await expectValue(
+            (
+              await crowdfund.campaigns(1)
+            ).pledged,
+            donationAmount
+          );
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            donationAmount
+          );
+        });
+        it('should revert if campaign ended', async () => {
+          await time.increaseTo(endAt + 30);
+          await expectRevert(
+            crowdfund.connect(pledger1).unpledge(1, donationAmount),
+            'campaign ended'
+          );
+          await expectValue(
+            (
+              await crowdfund.campaigns(1)
+            ).pledged,
+            donationAmount
+          );
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            donationAmount
+          );
+        });
+        it('should revert if invalid amount', async () => {
+          await expectRevert(
+            crowdfund.connect(pledger1).unpledge(1, 0),
+            'invalid amount'
+          );
+          await expectRevert(
+            crowdfund
+              .connect(pledger1)
+              .unpledge(1, donationAmount.add(ethers.BigNumber.from('10'))),
+            'invalid amount'
+          );
+          await expectValue(
+            (
+              await crowdfund.campaigns(1)
+            ).pledged,
+            donationAmount
+          );
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            donationAmount
+          );
+        });
+        it('should unpledge and refund unpledge amount', async () => {
+          await expectValue(await mockToken.balanceOf(pledger1.address), 0);
+          await expectValue(
+            await mockToken.balanceOf(crowdfund.address),
+            donationAmount
+          );
+          const unpledgeAmount: BigNumber = ethers.utils.parseEther('0.25');
+          await crowdfund.connect(pledger1).unpledge(1, unpledgeAmount);
+          await expectValue(
+            (
+              await crowdfund.campaigns(1)
+            ).pledged,
+            donationAmount.sub(unpledgeAmount)
+          );
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            donationAmount.sub(unpledgeAmount)
+          );
+          await expectValue(
+            await mockToken.balanceOf(pledger1.address),
+            unpledgeAmount
+          );
+          await expectValue(
+            await mockToken.balanceOf(crowdfund.address),
+            donationAmount.sub(unpledgeAmount)
+          );
+        });
+        it('should emit a Unpledged event', async () => {
+          const unpledgeAmount: BigNumber = ethers.utils.parseEther('0.25');
+          await expectEvent(
+            await crowdfund.connect(pledger1).unpledge(1, unpledgeAmount),
+            crowdfund,
+            'Unpledged',
+            [1, pledger1.address, unpledgeAmount]
+          );
+        });
+      });
+      describe('claim', function () {
+        it('should revert if not creator', async () => {});
+        it('should revert if campaign cancelled', async () => {});
+        it('should revert if campaign not over', async () => {});
+        it('should revert if not creator', async () => {});
+        it('should revert if pledged < goal', async () => {});
+        it('should claim and transfer donations', async () => {});
+        it('should revert if already claimed', async () => {});
+        it('should emit a Claim event', async () => {});
+      });
+      describe('refund', function () {
+        it('should revert if campaign does not exist', async () => {});
+        it('should revert if campaign not over', async () => {});
+        it('should revert if campaign succeeded', async () => {});
+        it('should revert if invalid amount', async () => {});
+        it('should refund all tokens back to pledger', async () => {});
+        it('should emit a Refund event', async () => {});
+      });
     });
