@@ -13,12 +13,14 @@ export default async function unpledge(
 ): Promise<void> {
   if (chainId == 31337) {
     const pledger1 = (await getNamedAccounts()).pledger1;
+    const signer = ethers.provider.getSigner(pledger1);
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
 
-    await crowdfund.connect(pledger1).unpledge(campaignId, amount);
+    await crowdfund.connect(signer).unpledge(campaignId, amount);
     console.log(`unpledged ${amount}!`);
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
+    const signer = ethers.provider.getSigner(account!);
 
     await crowdfund.connect(account!).unpledge(campaignId, amount);
     console.log(`unpledged ${amount}!`);

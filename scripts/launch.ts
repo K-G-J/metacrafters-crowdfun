@@ -13,6 +13,8 @@ export default async function launch(
 ): Promise<void> {
   if (chainId == 31337) {
     const deployer = (await getNamedAccounts()).deployer;
+    const signer = ethers.provider.getSigner(deployer);
+
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
 
     const minDuation =
@@ -21,7 +23,7 @@ export default async function launch(
       networkConfig[network.config.chainId!]['max_duration'].toNumber();
 
     await crowdfund
-      .connect(deployer)
+      .connect(signer)
       .launch(
         campaignGoal,
         currentTimestampInSeconds + minDuation,
@@ -31,6 +33,7 @@ export default async function launch(
     console.log('Campaign launched!');
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
+    const signer = ethers.provider.getSigner(account!);
 
     const minDuation =
       networkConfig[network.config.chainId!]['min_duration'].toNumber();
@@ -38,7 +41,7 @@ export default async function launch(
       networkConfig[network.config.chainId!]['max_duration'].toNumber();
 
     await crowdfund
-      .connect(account!)
+      .connect(signer)
       .launch(
         campaignGoal,
         currentTimestampInSeconds + minDuation,
