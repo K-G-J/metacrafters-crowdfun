@@ -220,7 +220,13 @@ contract Crowdfund is Initializable {
      */
     function claim(
         uint256 _id
-    ) external onlyCreator(_id) notCancelled(_id) campaignEnded(_id) {
+    )
+        external
+        campaignExists(_id)
+        onlyCreator(_id)
+        notCancelled(_id)
+        campaignEnded(_id)
+    {
         Campaign storage campaign = campaigns[_id];
 
         require(campaign.pledged >= campaign.goal, "pledged < goal");

@@ -37,8 +37,6 @@ async function setUp(): Promise<void> {
   maxDuration = await crowdfund.maxDuration();
   donationAmount = ethers.utils.parseEther('1');
   campaignGoal = ethers.utils.parseEther('5');
-  await mockToken.mint(pledger1.address, donationAmount);
-  await mockToken.mint(pledger2.address, donationAmount);
   const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
   startAt = blockTimestamp + 30;
   endAt = startAt + Number(minDuration) + 15;
@@ -48,12 +46,14 @@ async function launchCampaigns(numCampaigns: number): Promise<void> {
   for (let i: number = 1; i <= numCampaigns; i++) {
     await crowdfund.launch(campaignGoal, startAt, endAt);
     await expectValue((await crowdfund.campaigns(i)).id, i);
+    await expectValue((await crowdfund.campaigns(i)).creator, deployer.address);
   }
 }
 
 async function pledge(
   pledger: SignerWithAddress,
-  campaignId: number
+  campaignId: number,
+  amount: BigNumber
 ): Promise<void> {
   await time.increaseTo(startAt);
   const donationsBefore: BigNumber = (await crowdfund.campaigns(campaignId))
@@ -62,17 +62,18 @@ async function pledge(
     campaignId,
     pledger.address
   );
-  await mockToken.connect(pledger).approve(crowdfund.address, donationAmount);
-  await crowdfund.connect(pledger).pledge(campaignId, donationAmount);
+  await mockToken.mint(pledger.address, amount);
+  await mockToken.connect(pledger).approve(crowdfund.address, amount);
+  await crowdfund.connect(pledger).pledge(campaignId, amount);
   await expectValue(
     (
       await crowdfund.campaigns(campaignId)
     ).pledged,
-    donationsBefore.add(donationAmount)
+    donationsBefore.add(amount)
   );
   await expectValue(
     await crowdfund.pledgedAmount(campaignId, pledger.address),
-    pledgedBefore.add(donationAmount)
+    pledgedBefore.add(amount)
   );
 }
 
@@ -221,6 +222,7 @@ async function pledge(
       describe('pledge', function () {
         beforeEach(async () => {
           await launchCampaigns(1);
+          await mockToken.mint(pledger1.address, donationAmount);
         });
         it('should revert if campaign does not exist', async () => {
           await expectRevert(
@@ -307,7 +309,7 @@ async function pledge(
       describe('unpledge', function () {
         beforeEach(async () => {
           await launchCampaigns(1);
-          await pledge(pledger1, 1);
+          await pledge(pledger1, 1, donationAmount);
         });
         it('should revert if campaign does not exist', async () => {
           await expectRevert(
@@ -402,21 +404,159 @@ async function pledge(
         });
       });
       describe('claim', function () {
-        it('should revert if not creator', async () => {});
-        it('should revert if campaign cancelled', async () => {});
-        it('should revert if campaign not over', async () => {});
-        it('should revert if not creator', async () => {});
-        it('should revert if pledged < goal', async () => {});
-        it('should claim and transfer donations', async () => {});
-        it('should revert if already claimed', async () => {});
-        it('should emit a Claim event', async () => {});
+        beforeEach(async () => {
+          await launchCampaigns(1);
+        });
+        it('should revert if campaign does not exist', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await time.increaseTo(endAt + 30);
+          await expectRevert(crowdfund.claim(2), 'campaign does not exist');
+          await expectValue((await crowdfund.campaigns(1)).claimed, false);
+        });
+        it('should revert if not creator', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await time.increaseTo(endAt + 30);
+          await expectRevert(
+            crowdfund.connect(pledger2).claim(1),
+            'not creator'
+          );
+          await expectValue((await crowdfund.campaigns(1)).claimed, false);
+        });
+        it('should revert if campaign cancelled', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await crowdfund.cancel(1);
+          await expectValue((await crowdfund.campaigns(1)).cancelled, true);
+          await time.increaseTo(endAt + 30);
+          await expectRevert(crowdfund.claim(1), 'campaign cancelled');
+          await expectValue((await crowdfund.campaigns(1)).claimed, false);
+        });
+        it('should revert if campaign not over', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await expectRevert(crowdfund.claim(1), 'campaign not ended');
+          await expectValue((await crowdfund.campaigns(1)).claimed, false);
+        });
+        it('should revert if pledged < goal', async () => {
+          await pledge(
+            pledger1,
+            1,
+            campaignGoal.sub(ethers.utils.parseEther('2'))
+          );
+          await time.increaseTo(endAt + 30);
+          await expectValue(
+            (
+              await crowdfund.campaigns(1)
+            ).pledged,
+            campaignGoal.sub(ethers.utils.parseEther('2'))
+          );
+          await expectRevert(crowdfund.claim(1), 'pledged < goal');
+          await expectValue((await crowdfund.campaigns(1)).claimed, false);
+        });
+        it('should claim and transfer donations', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await expectValue(
+            await mockToken.balanceOf(crowdfund.address),
+            campaignGoal
+          );
+          await time.increaseTo(endAt + 30);
+          await crowdfund.claim(1);
+          await expectValue((await crowdfund.campaigns(1)).claimed, true);
+          await expectValue(await mockToken.balanceOf(crowdfund.address), 0);
+          await expectValue(
+            await mockToken.balanceOf(deployer.address),
+            campaignGoal
+          );
+        });
+        it('should revert if already claimed', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await time.increaseTo(endAt + 30);
+          await crowdfund.claim(1);
+          await expectValue((await crowdfund.campaigns(1)).claimed, true);
+          await expectRevert(crowdfund.claim(1), 'claimed');
+          await expectValue(
+            await mockToken.balanceOf(deployer.address),
+            campaignGoal
+          );
+        });
+        it('should emit a Claim event', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await time.increaseTo(endAt + 30);
+          await expectEvent(await crowdfund.claim(1), crowdfund, 'Claim', [1]);
+        });
       });
       describe('refund', function () {
-        it('should revert if campaign does not exist', async () => {});
-        it('should revert if campaign not over', async () => {});
-        it('should revert if campaign succeeded', async () => {});
-        it('should revert if invalid amount', async () => {});
-        it('should refund all tokens back to pledger', async () => {});
-        it('should emit a Refund event', async () => {});
+        let underGoal: BigNumber;
+        beforeEach(async () => {
+          await launchCampaigns(1);
+          underGoal = campaignGoal.sub(ethers.utils.parseEther('1'));
+        });
+        it('should revert if campaign does not exist', async () => {
+          await pledge(pledger1, 1, underGoal);
+          await time.increaseTo(endAt + 30);
+          await expectRevert(
+            crowdfund.connect(pledger1).refund(2),
+            'campaign does not exist'
+          );
+        });
+        it('should revert if campaign not over', async () => {
+          await pledge(pledger1, 1, underGoal);
+          await expectRevert(
+            crowdfund.connect(pledger1).refund(1),
+            'campaign not ended'
+          );
+        });
+        it('should revert if campaign succeeded', async () => {
+          await pledge(pledger1, 1, campaignGoal);
+          await time.increaseTo(endAt + 30);
+          await expectValue(
+            (
+              await crowdfund.campaigns(1)
+            ).pledged,
+            campaignGoal
+          );
+          assert.equal(
+            (await crowdfund.campaigns(1)).pledged.toString(),
+            (await crowdfund.campaigns(1)).goal.toString()
+          );
+          await expectRevert(
+            crowdfund.connect(pledger1).refund(1),
+            'pledged >= goal'
+          );
+          await expectValue(await mockToken.balanceOf(pledger1.address), 0);
+        });
+        it('should refund all tokens back to pledger', async () => {
+          await pledge(pledger1, 1, underGoal);
+          await time.increaseTo(endAt + 30);
+          await expectValue((await crowdfund.campaigns(1)).pledged, underGoal);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            underGoal
+          );
+          await expectValue(
+            await mockToken.balanceOf(crowdfund.address),
+            underGoal
+          );
+          await expectValue(await mockToken.balanceOf(pledger1.address), 0);
+          await crowdfund.connect(pledger1).refund(1);
+          await expectValue((await crowdfund.campaigns(1)).pledged, 0);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            0
+          );
+          await expectValue(await mockToken.balanceOf(crowdfund.address), 0);
+          await expectValue(
+            await mockToken.balanceOf(pledger1.address),
+            underGoal
+          );
+        });
+        it('should emit a Refund event', async () => {
+          await pledge(pledger1, 1, underGoal);
+          await time.increaseTo(endAt + 30);
+          await expectEvent(
+            await crowdfund.connect(pledger1).refund(1),
+            crowdfund,
+            'Refund',
+            [1, pledger1.address, underGoal]
+          );
+        });
       });
     });
