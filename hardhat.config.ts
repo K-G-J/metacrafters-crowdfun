@@ -82,7 +82,7 @@ const config: HardhatUserConfig = {
     pledger1: {
       default: 1
     },
-    pleder2: {
+    pledger2: {
       default: 2
     }
   },
