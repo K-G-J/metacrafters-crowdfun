@@ -76,7 +76,7 @@ async function pledge(
   );
 }
 
-// hh test --network localhost --grep "Crowdfund Unit Tests"
+// hh test --grep "Crowdfund Unit Tests"
 
 !developmentChains.includes(network.name)
   ? describe.skip
