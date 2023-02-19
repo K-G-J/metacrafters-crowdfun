@@ -6,6 +6,8 @@ import { networkConfig } from '../helper-hardhat-config';
 const chainId = network.config.chainId;
 const PLEDGE_AMOUNT: BigNumber = ethers.utils.parseEther('1');
 
+// yarn hardhat run scripts/pledge.ts --network localhost
+
 export default async function pledge(
   campaignId: number,
   amount: BigNumber,
@@ -22,17 +24,27 @@ export default async function pledge(
     await mockToken.connect(signer).approve(crowdfund.address, amount);
 
     await crowdfund.connect(signer).pledge(campaignId, amount);
-    console.log(`pledged ${amount}!`);
+    console.log(`\nPledged ${amount.toNumber()}!\n`);
+
+    const totalDonated: BigNumber = await crowdfund
+      .connect(signer)
+      .pledgedAmount(campaignId, pledger1);
+    console.log(`\nTotal Donated: ${totalDonated.toNumber()}\n`);
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
     const tokenAddress = networkConfig[network.config.chainId!]['tokenAddress'];
     const token = await ethers.getContractAt('IERC20', tokenAddress);
     const signer = ethers.provider.getSigner(account!);
 
-    await token.connect(account!).approve(crowdfund.address, amount);
+    await token.connect(signer).approve(crowdfund.address, amount);
 
     await crowdfund.connect(account!).pledge(campaignId, amount);
-    console.log(`pledged ${amount}!`);
+    console.log(`\nPledged ${amount.toNumber()}!\n`);
+
+    const totalDonated: BigNumber = await crowdfund
+      .connect(signer)
+      .pledgedAmount(campaignId, account!);
+    console.log(`\nTotal Donated: ${totalDonated.toNumber()}\n`);
   }
 }
 

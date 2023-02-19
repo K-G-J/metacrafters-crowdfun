@@ -7,6 +7,8 @@ const chainId = network.config.chainId;
 const CAMPAIGN_GOAL: BigNumber = ethers.utils.parseEther('5');
 const currentTimestampInSeconds = Math.round(Date.now() / 1000);
 
+// yarn hardhat run scripts/launch.ts --network localhost
+
 export default async function launch(
   campaignGoal: BigNumber,
   account?: string
@@ -30,7 +32,9 @@ export default async function launch(
         currentTimestampInSeconds + maxDuation
       );
 
-    console.log('Campaign launched!');
+    console.log(
+      `\nCampaign launched!\nCampaign Goal: ${campaignGoal.toNumber()}\n`
+    );
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
     const signer = ethers.provider.getSigner(account!);
@@ -48,7 +52,9 @@ export default async function launch(
         currentTimestampInSeconds + maxDuation
       );
 
-    console.log('Campaign launched!');
+    console.log(
+      `\nCampaign launched!\nCampaign Goal: ${campaignGoal.toNumber()}\n`
+    );
   }
 }
 

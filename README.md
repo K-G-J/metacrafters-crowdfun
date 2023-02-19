@@ -15,6 +15,8 @@ This project is made to fulfill the [METACRAFTERS](https://www.metacrafters.io) 
 
 ## Commands
 
+For local testing use the flag ```--network localhost``` with each command
+
 ```shell
 yarn hardhat deploy
 yarn hardhat test
