@@ -62,16 +62,16 @@ contract Crowdfund is Initializable {
      * dApps using the contract can observe state changes in transaction logs
      */
     event Launch(
-        uint256 id,
+        uint256 indexed id,
         address indexed creator,
         uint256 goal,
         uint32 startAt,
         uint32 endAt
     );
-    event Cancel(uint256 id);
+    event Cancel(uint256 indexed id);
     event Pledged(uint256 indexed id, address indexed caller, uint256 amount);
     event Unpledged(uint256 indexed id, address indexed caller, uint256 amount);
-    event Claim(uint256 id);
+    event Claim(uint256 indexed id);
     event Refund(uint256 indexed id, address indexed caller, uint256 amount);
 
     /* ========== MODIFIERS ========== */
@@ -120,7 +120,7 @@ contract Crowdfund is Initializable {
         IERC20 _token,
         uint256 _minDuration,
         uint256 _maxDuration
-    ) public initializer onlyInitializing {
+    ) public initializer {
         require(_minDuration < _maxDuration, "minDuration > maxDuration");
         token = _token;
         minDuration = _minDuration;
