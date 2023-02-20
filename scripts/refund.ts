@@ -19,7 +19,7 @@ export default async function refund(
       .connect(signer)
       .pledgedAmount(campaignId, pledger1);
 
-    await crowdfund.refund(campaignId);
+    await crowdfund.connect(signer).refund(campaignId);
     console.log(`\nRefunded ${ethers.utils.formatEther(totalDonated)}\n`);
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
@@ -29,7 +29,7 @@ export default async function refund(
       .connect(signer)
       .pledgedAmount(campaignId, account!);
 
-    await crowdfund.refund(campaignId);
+    await crowdfund.connect(signer).refund(campaignId);
     console.log(`\nRefunded ${ethers.utils.formatEther(totalDonated)}\n`);
   }
 }

@@ -274,7 +274,7 @@ contract Crowdfund is Initializable {
         pledgedAmount[_id][_donor] -= _amount;
         campaigns[_id].pledged -= _amount;
 
-        token.safeApprove(_donor, _amount);
+        token.safeIncreaseAllowance(_donor, _amount);
         token.safeTransfer(_donor, _amount);
     }
 }
