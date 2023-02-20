@@ -228,15 +228,14 @@ contract Crowdfund is Initializable {
         campaignEnded(_id)
     {
         Campaign storage campaign = campaigns[_id];
-        uint256 pledged = campaign.pledged;
 
         require(!campaign.claimed, "claimed");
-        require(pledged >= campaign.goal, "pledged < goal");
+        require(campaign.pledged >= campaign.goal, "pledged < goal");
 
         campaign.claimed = true;
-        campaigns[_id].pledged = 0;
-        token.safeApprove(msg.sender, pledged);
-        token.safeTransfer(msg.sender, pledged);
+
+        token.safeIncreaseAllowance(msg.sender, campaign.pledged);
+        token.safeTransfer(msg.sender, campaign.pledged);
 
         emit Claim(_id);
     }
