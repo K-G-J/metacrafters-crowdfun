@@ -542,6 +542,32 @@ async function pledge(
             underGoal
           );
         });
+        it.only('should refund all tokens back to pledger', async () => {
+          await pledge(pledger1, 1, underGoal);
+          await crowdfund
+            .connect(pledger1)
+            .unpledge(1, ethers.utils.parseEther('0.25'));
+          await time.increaseTo(endAt + 30);
+
+          await crowdfund.connect(pledger1).refund(1);
+
+          console.log(
+            (
+              await mockToken.allowance(crowdfund.address, pledger1.address)
+            ).toString()
+          );
+
+          await expectValue((await crowdfund.campaigns(1)).pledged, 0);
+          await expectValue(
+            await crowdfund.pledgedAmount(1, pledger1.address),
+            0
+          );
+          await expectValue(await mockToken.balanceOf(crowdfund.address), 0);
+          await expectValue(
+            await mockToken.balanceOf(pledger1.address),
+            underGoal
+          );
+        });
         it('should emit a Refund event', async () => {
           await pledge(pledger1, 1, underGoal);
           await time.increaseTo(endAt + 30);

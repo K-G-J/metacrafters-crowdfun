@@ -24,12 +24,12 @@ export default async function pledge(
     await mockToken.connect(signer).approve(crowdfund.address, amount);
 
     await crowdfund.connect(signer).pledge(campaignId, amount);
-    console.log(`\nPledged ${amount.toNumber()}!\n`);
+    console.log(`\nPledged ${ethers.utils.formatEther(amount)}!`);
 
     const totalDonated: BigNumber = await crowdfund
       .connect(signer)
       .pledgedAmount(campaignId, pledger1);
-    console.log(`\nTotal Donated: ${totalDonated.toNumber()}\n`);
+    console.log(`\nTotal Donated: ${ethers.utils.formatEther(totalDonated)}\n`);
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
     const tokenAddress = networkConfig[network.config.chainId!]['tokenAddress'];
@@ -39,18 +39,25 @@ export default async function pledge(
     await token.connect(signer).approve(crowdfund.address, amount);
 
     await crowdfund.connect(account!).pledge(campaignId, amount);
-    console.log(`\nPledged ${amount.toNumber()}!\n`);
+    console.log(`\nPledged ${ethers.utils.formatEther(amount)}!`);
 
     const totalDonated: BigNumber = await crowdfund
       .connect(signer)
       .pledgedAmount(campaignId, account!);
-    console.log(`\nTotal Donated: ${totalDonated.toNumber()}\n`);
+    console.log(`\nTotal Donated: ${ethers.utils.formatEther(totalDonated)}\n`);
   }
 }
 
 pledge(1, PLEDGE_AMOUNT)
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
+    const reason = error.reason
+      .replace(
+        'Error: VM Exception while processing transaction: reverted with reason string ',
+        ''
+      )
+      .replace(/[']/g, '');
+    reason.replace("''", '');
+    console.log(`\n\n${reason}\n\n`);
     process.exit(1);
   });

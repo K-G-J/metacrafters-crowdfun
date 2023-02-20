@@ -33,7 +33,9 @@ export default async function launch(
       );
 
     console.log(
-      `\nCampaign launched!\nCampaign Goal: ${campaignGoal.toNumber()}\n`
+      `\nCampaign launched!\nCampaign Goal: ${ethers.utils.formatEther(
+        campaignGoal
+      )}\n`
     );
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
@@ -53,7 +55,9 @@ export default async function launch(
       );
 
     console.log(
-      `\nCampaign launched!\nCampaign Goal: ${campaignGoal.toNumber()}\n`
+      `\nCampaign launched!\nCampaign Goal: ${ethers.utils.formatEther(
+        campaignGoal
+      )}\n`
     );
   }
 }
@@ -61,6 +65,13 @@ export default async function launch(
 launch(CAMPAIGN_GOAL)
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
+    const reason = error.reason
+      .replace(
+        'Error: VM Exception while processing transaction: reverted with reason string ',
+        ''
+      )
+      .replace(/[']/g, '');
+    reason.replace("''", '');
+    console.log(`\n\n${reason}\n\n`);
     process.exit(1);
   });
