@@ -25,4 +25,5 @@ yarn hardhat node
 yarn hardhat run scripts/launch.ts
 yarn hardhat run scripts/pledge.ts
 yarn hardhat run scripts/unpledge.ts
+yarn hardhat run scripts/refund.ts
 ```
