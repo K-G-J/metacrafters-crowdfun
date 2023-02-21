@@ -45,7 +45,7 @@ const prompt = promptSync({ sigint: true });
     switch (answer.toLowerCase()) {
       case 'y':
         campaignId = await getCampaignId();
-        refund(campaignId)
+        await refund(campaignId)
           .then(() => process.exit(0))
           .catch((error) => {
             const reason = error.reason
@@ -62,7 +62,7 @@ const prompt = promptSync({ sigint: true });
       case 'n':
         account = await getAccount();
         campaignId = await getCampaignId();
-        refund(campaignId, account)
+        await refund(campaignId, account)
           .then(() => process.exit(0))
           .catch((error) => {
             const reason = error.reason
