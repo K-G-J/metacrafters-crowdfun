@@ -1,8 +1,14 @@
-import * as readline from 'readline';
+import promptSync from 'prompt-sync';
 import { ethers, getNamedAccounts, network } from 'hardhat';
 import { Crowdfund } from '../typechain-types';
 import { BigNumber } from 'ethers';
 import { networkConfig } from '../helper-hardhat-config';
+import {
+  getAccount,
+  getCampaignGoal,
+  getEndAt,
+  getStartAt
+} from './lib/prompts';
 
 const chainId = network.config.chainId;
 let campaignGoal: BigNumber, account: string;
@@ -55,66 +61,15 @@ export default async function launch(
   }
 }
 
-let rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+const prompt = promptSync({ sigint: true });
 
-export const getCampaignGoal = async (): Promise<BigNumber> => {
-  let goal: BigNumber = ethers.BigNumber.from(0);
-  rl.question('What is the campaign goal?  ', (answer) => {
-    while (!isNaN(parseInt(answer))) {
-      getCampaignGoal();
-    }
-    goal = ethers.BigNumber.from(answer);
-    rl.close();
-  });
-  return goal;
-};
-
-export const getAccount = async (): Promise<string> => {
-  let account: string = '';
-  rl.question('What is your address?  ', (answer) => {
-    while (!/^(0x)?[0-9a-f]{40}$/i.test(answer)) {
-      console.log('\nThat is not a valid address\n');
-      getAccount();
-    }
-    account = answer;
-    rl.close();
-  });
-  return account;
-};
-
-export const getStartAt = async (): Promise<BigNumber> => {
-  let startAt: BigNumber = ethers.BigNumber.from(0);
-  rl.question('When does the campaign start?  ', (answer) => {
-    while (!isNaN(parseInt(answer))) {
-      getStartAt();
-    }
-    startAt = ethers.BigNumber.from(answer);
-    rl.close();
-  });
-  return startAt;
-};
-
-export const getEndAt = async (): Promise<BigNumber> => {
-  let endAt: BigNumber = ethers.BigNumber.from(0);
-  rl.question('When does the campaign end?  ', (answer) => {
-    while (!isNaN(parseInt(answer))) {
-      getEndAt();
-    }
-    endAt = ethers.BigNumber.from(answer);
-    rl.close();
-  });
-  return endAt;
-};
-
-(() => {
-  rl.question('Are you on localhost? [y/n] ', (answer) => {
+(async () => {
+  do {
+    const answer = prompt('Are you on localhost? [y/n] ');
     switch (answer.toLowerCase()) {
       case 'y':
         campaignGoal = await getCampaignGoal();
-        launch(campaignGoal)
+        await launch(campaignGoal)
           .then(() => process.exit(0))
           .catch((error) => {
             const reason = error.reason
@@ -131,7 +86,7 @@ export const getEndAt = async (): Promise<BigNumber> => {
       case 'n':
         account = await getAccount();
         campaignGoal = await getCampaignGoal();
-        launch(campaignGoal, account)
+        await launch(campaignGoal, account)
           .then(() => process.exit(0))
           .catch((error) => {
             const reason = error.reason
@@ -147,7 +102,7 @@ export const getEndAt = async (): Promise<BigNumber> => {
         break;
       default:
         console.log('Invalid answer');
+        continue;
     }
-    rl.close();
-  });
+  } while (true);
 })();

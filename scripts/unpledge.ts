@@ -1,9 +1,11 @@
 import { ethers, getNamedAccounts, network } from 'hardhat';
 import { Crowdfund } from '../typechain-types';
 import { BigNumber } from 'ethers';
+import promptSync from 'prompt-sync';
+import { getAccount, getAmount, getCampaignId } from './lib/prompts';
 
 const chainId = network.config.chainId;
-const UNPLEDGE_AMOUNT: BigNumber = ethers.utils.parseEther('.25');
+let campaignId: number, amount: BigNumber, account: string;
 
 // yarn hardhat run scripts/unpledge.ts --network localhost
 
@@ -28,7 +30,7 @@ export default async function unpledge(
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
     const signer = ethers.provider.getSigner(account!);
 
-    await crowdfund.connect(account!).unpledge(campaignId, amount);
+    await crowdfund.connect(signer).unpledge(campaignId, amount);
     console.log(`\nUnpledged ${ethers.utils.formatEther(amount)}!`);
 
     const totalDonated: BigNumber = await crowdfund
@@ -38,16 +40,50 @@ export default async function unpledge(
   }
 }
 
-unpledge(1, UNPLEDGE_AMOUNT)
-  .then(() => process.exit(0))
-  .catch((error) => {
-    const reason = error.reason
-      .replace(
-        'Error: VM Exception while processing transaction: reverted with reason string ',
-        ''
-      )
-      .replace(/[']/g, '');
-    reason.replace("''", '');
-    console.log(`\n\n${reason}\n\n`);
-    process.exit(1);
-  });
+const prompt = promptSync({ sigint: true });
+
+(async () => {
+  do {
+    const answer = prompt('Are you on localhost? [y/n] ');
+    switch (answer.toLowerCase()) {
+      case 'y':
+        campaignId = await getCampaignId();
+        amount = await getAmount('unpledge');
+        await unpledge(campaignId, amount)
+          .then(() => process.exit(0))
+          .catch((error) => {
+            const reason = error.reason
+              .replace(
+                'Error: VM Exception while processing transaction: reverted with reason string ',
+                ''
+              )
+              .replace(/[']/g, '');
+            reason.replace("''", '');
+            console.log(`\n\n${reason}\n\n`);
+            process.exit(1);
+          });
+        break;
+      case 'n':
+        account = await getAccount();
+        campaignId = await getCampaignId();
+        amount = await getAmount('unpledge');
+        await unpledge(campaignId, amount, account)
+          .then(() => process.exit(0))
+          .catch((error) => {
+            const reason = error.reason
+              .replace(
+                'Error: VM Exception while processing transaction: reverted with reason string ',
+                ''
+              )
+              .replace(/[']/g, '');
+            reason.replace("''", '');
+            console.log(`\n\n${reason}\n\n`);
+            process.exit(1);
+          });
+        break;
+      default:
+        console.log('Invalid answer');
+        continue;
+    }
+  } while (true);
+})();

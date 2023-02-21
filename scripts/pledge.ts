@@ -2,9 +2,11 @@ import { ethers, getNamedAccounts, network } from 'hardhat';
 import { MockToken, Crowdfund, IERC20 } from '../typechain-types';
 import { BigNumber } from 'ethers';
 import { networkConfig } from '../helper-hardhat-config';
+import { getAccount, getAmount, getCampaignId } from './lib/prompts';
+import promptSync from 'prompt-sync';
 
 const chainId = network.config.chainId;
-const PLEDGE_AMOUNT: BigNumber = ethers.utils.parseEther('1');
+let campaignId: number, amount: BigNumber, account: string;
 
 // yarn hardhat run scripts/pledge.ts --network localhost
 
@@ -33,12 +35,12 @@ export default async function pledge(
   } else {
     const crowdfund: Crowdfund = await ethers.getContract('Crowdfund');
     const tokenAddress = networkConfig[network.config.chainId!]['tokenAddress'];
-    const token = await ethers.getContractAt('IERC20', tokenAddress);
+    const token: IERC20 = await ethers.getContractAt('IERC20', tokenAddress);
     const signer = ethers.provider.getSigner(account!);
 
     await token.connect(signer).approve(crowdfund.address, amount);
 
-    await crowdfund.connect(account!).pledge(campaignId, amount);
+    await crowdfund.connect(signer).pledge(campaignId, amount);
     console.log(`\nPledged ${ethers.utils.formatEther(amount)}!`);
 
     const totalDonated: BigNumber = await crowdfund
@@ -48,16 +50,50 @@ export default async function pledge(
   }
 }
 
-pledge(1, PLEDGE_AMOUNT)
-  .then(() => process.exit(0))
-  .catch((error) => {
-    const reason = error.reason
-      .replace(
-        'Error: VM Exception while processing transaction: reverted with reason string ',
-        ''
-      )
-      .replace(/[']/g, '');
-    reason.replace("''", '');
-    console.log(`\n\n${reason}\n\n`);
-    process.exit(1);
-  });
+const prompt = promptSync({ sigint: true });
+
+(async () => {
+  do {
+    const answer = prompt('Are you on localhost? [y/n] ');
+    switch (answer.toLowerCase()) {
+      case 'y':
+        campaignId = await getCampaignId();
+        amount = await getAmount('pledge');
+        await pledge(campaignId, amount)
+          .then(() => process.exit(0))
+          .catch((error) => {
+            const reason = error.reason
+              .replace(
+                'Error: VM Exception while processing transaction: reverted with reason string ',
+                ''
+              )
+              .replace(/[']/g, '');
+            reason.replace("''", '');
+            console.log(`\n\n${reason}\n\n`);
+            process.exit(1);
+          });
+        break;
+      case 'n':
+        account = await getAccount();
+        campaignId = await getCampaignId();
+        amount = await getAmount('pledge');
+        await pledge(campaignId, amount, account)
+          .then(() => process.exit(0))
+          .catch((error) => {
+            const reason = error.reason
+              .replace(
+                'Error: VM Exception while processing transaction: reverted with reason string ',
+                ''
+              )
+              .replace(/[']/g, '');
+            reason.replace("''", '');
+            console.log(`\n\n${reason}\n\n`);
+            process.exit(1);
+          });
+        break;
+      default:
+        console.log('Invalid answer');
+        continue;
+    }
+  } while (true);
+})();
