@@ -23,7 +23,9 @@ yarn hardhat test
 REPORT_GAS=true yarn hardhat test
 yarn hardhat node
 yarn hardhat run scripts/launch.ts
+yarn hardhat run scripts/cancel.ts
 yarn hardhat run scripts/pledge.ts
 yarn hardhat run scripts/unpledge.ts
+yarn hardhat run scripts/claim.ts
 yarn hardhat run scripts/refund.ts
 ```
