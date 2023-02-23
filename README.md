@@ -6,6 +6,8 @@ Crowdfunding campaign where users can pledge funds to and claim funds from the C
 
 This project is made to fulfill the [METACRAFTERS](https://www.metacrafters.io) Talent Collective Solidity challenge
 
+## [Video Walkthrough](https://youtu.be/Dhje-1qkttQ)
+
 ## Installation
 
 1. Clone this repository
